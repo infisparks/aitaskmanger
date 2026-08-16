@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { TaskItem, StaffContact, TaskStatus, TaskPriority } from "@/types";
 import { updateTask, deleteTask } from "@/lib/firebase";
-import { formatStaffWhatsAppMessage, sendWhatsAppMessage } from "@/lib/whatsapp";
+import { formatStaffWhatsAppMessage, sendWhatsAppMessage, openWhatsAppDirectLink } from "@/lib/whatsapp";
 import {
   Search,
   Filter,
@@ -20,7 +20,8 @@ import {
   List,
   Sparkles,
   ArrowUpDown,
-  Check
+  Check,
+  ExternalLink
 } from "lucide-react";
 
 interface TaskDashboardProps {
@@ -89,28 +90,34 @@ export const TaskDashboard: React.FC<TaskDashboardProps> = ({
 
   const handleResendWhatsApp = async (task: TaskItem) => {
     setSendingWhatsAppId(task.id);
-    try {
-      const msg = formatStaffWhatsAppMessage(task.assignedStaffName, [
-        {
-          title: task.title,
-          description: task.description,
-          priority: task.priority,
-          dueDate: task.dueDate,
-        },
-      ]);
+    const msg = formatStaffWhatsAppMessage(task.assignedStaffName, [
+      {
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        dueDate: task.dueDate,
+      },
+    ]);
 
+    try {
       const res = await sendWhatsAppMessage(task.assignedStaffPhone, msg);
       if (res.success) {
         await updateTask(task.id, {
           whatsappSent: true,
           whatsappSentAt: Date.now(),
         });
-        alert(`WhatsApp notification sent to ${task.assignedStaffName}!`);
+        alert(`WhatsApp notification sent directly to ${task.assignedStaffName}!`);
       } else {
-        alert(`WhatsApp failed: ${res.error}`);
+        const fallback = confirm(`Automated dispatch error: ${res.error}\n\nWould you like to open WhatsApp app directly to send this task?`);
+        if (fallback) {
+          openWhatsAppDirectLink(task.assignedStaffPhone, msg);
+        }
       }
     } catch (err: any) {
-      alert("Failed to send WhatsApp: " + err.message);
+      const fallback = confirm(`Connection error: ${err.message}\n\nWould you like to open WhatsApp app directly to send this task?`);
+      if (fallback) {
+        openWhatsAppDirectLink(task.assignedStaffPhone, msg);
+      }
     } finally {
       setSendingWhatsAppId(null);
     }
@@ -120,25 +127,25 @@ export const TaskDashboard: React.FC<TaskDashboardProps> = ({
     switch (priority) {
       case "urgent":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-red-700 border border-red-200">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold bg-red-50 text-red-700 border border-red-200">
             🔴 Urgent
           </span>
         );
       case "high":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
             🟠 High
           </span>
         );
       case "medium":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
             🟡 Medium
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-50 text-gray-600 border border-gray-200">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-medium bg-gray-50 text-gray-600 border border-gray-200">
             🟢 Low
           </span>
         );
@@ -175,101 +182,123 @@ export const TaskDashboard: React.FC<TaskDashboardProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Top Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Tasks */}
-        <div className="bg-white p-4 sm:p-5 rounded-xl border border-[#E5E7EB] shadow-xs">
-          <div className="flex items-center justify-between text-[12px] text-[#6B7280]">
+        <div className="bg-white p-3.5 sm:p-5 rounded-xl border border-[#E5E7EB] shadow-2xs">
+          <div className="flex items-center justify-between text-[11px] sm:text-[12px] text-[#6B7280]">
             <span>Total Tasks</span>
             <span className="p-1 rounded-md bg-[#F3F4F6] text-[#4F46E5]">
               <List className="w-3.5 h-3.5" />
             </span>
           </div>
-          <p className="text-[22px] sm:text-[24px] font-bold text-[#111827] mt-1">
+          <p className="text-[20px] sm:text-[24px] font-bold text-[#111827] mt-1">
             {totalTasksCount}
           </p>
-          <p className="text-[11px] text-[#6B7280] mt-1">
-            {completedCount} completed ({totalTasksCount ? Math.round((completedCount / totalTasksCount) * 100) : 0}%)
+          <p className="text-[11px] text-[#6B7280] mt-0.5 sm:mt-1">
+            {completedCount} completed
           </p>
         </div>
 
         {/* Pending Action */}
-        <div className="bg-white p-4 sm:p-5 rounded-xl border border-[#E5E7EB] shadow-xs">
-          <div className="flex items-center justify-between text-[12px] text-[#6B7280]">
-            <span>Pending Tasks</span>
+        <div className="bg-white p-3.5 sm:p-5 rounded-xl border border-[#E5E7EB] shadow-2xs">
+          <div className="flex items-center justify-between text-[11px] sm:text-[12px] text-[#6B7280]">
+            <span>Pending</span>
             <span className="p-1 rounded-md bg-amber-50 text-amber-600">
               <Clock className="w-3.5 h-3.5" />
             </span>
           </div>
-          <p className="text-[22px] sm:text-[24px] font-bold text-amber-600 mt-1">
+          <p className="text-[20px] sm:text-[24px] font-bold text-amber-600 mt-1">
             {pendingCount}
           </p>
-          <p className="text-[11px] text-[#6B7280] mt-1">
+          <p className="text-[11px] text-[#6B7280] mt-0.5 sm:mt-1">
             {inProgressCount} in progress
           </p>
         </div>
 
         {/* WhatsApp Deliveries */}
-        <div className="bg-white p-4 sm:p-5 rounded-xl border border-[#E5E7EB] shadow-xs">
-          <div className="flex items-center justify-between text-[12px] text-[#6B7280]">
-            <span>WhatsApp Dispatches</span>
+        <div className="bg-white p-3.5 sm:p-5 rounded-xl border border-[#E5E7EB] shadow-2xs">
+          <div className="flex items-center justify-between text-[11px] sm:text-[12px] text-[#6B7280]">
+            <span>WhatsApp Sent</span>
             <span className="p-1 rounded-md bg-emerald-50 text-emerald-600">
               <Send className="w-3.5 h-3.5" />
             </span>
           </div>
-          <p className="text-[22px] sm:text-[24px] font-bold text-emerald-600 mt-1">
+          <p className="text-[20px] sm:text-[24px] font-bold text-emerald-600 mt-1">
             {whatsappDeliveredCount}
           </p>
-          <p className="text-[11px] text-[#6B7280] mt-1">
-            Via Evolution API instance
+          <p className="text-[11px] text-[#6B7280] mt-0.5 sm:mt-1">
+            Client Evolution API
           </p>
         </div>
 
         {/* Registered Staff */}
         <div 
           onClick={onOpenStaffModal}
-          className="bg-white p-4 sm:p-5 rounded-xl border border-[#E5E7EB] shadow-xs hover:border-[#4F46E5] cursor-pointer transition-all"
+          className="bg-white p-3.5 sm:p-5 rounded-xl border border-[#E5E7EB] shadow-2xs hover:border-[#4F46E5] cursor-pointer transition-all"
         >
-          <div className="flex items-center justify-between text-[12px] text-[#6B7280]">
+          <div className="flex items-center justify-between text-[11px] sm:text-[12px] text-[#6B7280]">
             <span>Staff Directory</span>
             <span className="p-1 rounded-md bg-[#EEF2FF] text-[#4F46E5]">
               <Sparkles className="w-3.5 h-3.5" />
             </span>
           </div>
-          <p className="text-[22px] sm:text-[24px] font-bold text-[#4F46E5] mt-1">
+          <p className="text-[20px] sm:text-[24px] font-bold text-[#4F46E5] mt-1">
             {staffList.length} Staff
           </p>
-          <p className="text-[11px] text-[#4F46E5] font-medium mt-1">
-            Manage Contacts &rarr;
+          <p className="text-[11px] text-[#4F46E5] font-medium mt-0.5 sm:mt-1">
+            Manage &rarr;
           </p>
         </div>
       </div>
 
       {/* Main Table / Board Container */}
-      <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-xs overflow-hidden">
+      <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-2xs overflow-hidden">
         {/* Controls Header */}
-        <div className="p-4 sm:p-5 border-b border-[#E5E7EB] flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-white">
-          <div className="flex items-center space-x-2">
-            <h3 className="text-[16px] font-bold text-[#111827]">
-              Task Assignments Board
-            </h3>
-            <span className="px-2 py-0.5 rounded-full bg-[#F3F4F6] text-[#6B7280] text-[12px] font-semibold">
-              {filteredTasks.length}
-            </span>
+        <div className="p-3.5 sm:p-5 border-b border-[#E5E7EB] flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <h3 className="text-[15px] sm:text-[16px] font-bold text-[#111827]">
+                Task Assignments
+              </h3>
+              <span className="px-2 py-0.5 rounded-full bg-[#F3F4F6] text-[#6B7280] text-[11px] sm:text-[12px] font-semibold">
+                {filteredTasks.length}
+              </span>
+            </div>
+
+            {/* View Switcher on mobile */}
+            <div className="flex sm:hidden items-center bg-[#F3F4F6] rounded-lg p-0.5 border border-[#E5E7EB]">
+              <button
+                onClick={() => setViewMode("table")}
+                className={`p-1 rounded-md text-[11px] ${
+                  viewMode === "table" ? "bg-white text-[#111827] shadow-xs" : "text-[#6B7280]"
+                }`}
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setViewMode("kanban")}
+                className={`p-1 rounded-md text-[11px] ${
+                  viewMode === "kanban" ? "bg-white text-[#111827] shadow-xs" : "text-[#6B7280]"
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* Filters & Search */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:flex lg:items-center gap-2">
             {/* Search */}
-            <div className="relative w-full sm:w-56">
-              <Search className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-2.5" />
+            <div className="relative w-full lg:w-56">
+              <Search className="w-3.5 h-3.5 text-[#9CA3AF] absolute left-3 top-2.5" />
               <input
                 type="text"
-                placeholder="Search tasks or staff..."
+                placeholder="Search tasks..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-[13px] bg-white border border-[#E5E7EB] rounded-lg text-[#111827] placeholder-[#9CA3AF] focus:outline-hidden focus:border-[#4F46E5]"
+                className="w-full pl-8 pr-3 py-1.5 text-[12px] sm:text-[13px] bg-white border border-[#E5E7EB] rounded-lg text-[#111827] placeholder-[#9CA3AF] focus:outline-hidden focus:border-[#4F46E5]"
               />
             </div>
 
@@ -277,9 +306,9 @@ export const TaskDashboard: React.FC<TaskDashboardProps> = ({
             <select
               value={selectedStaffFilter}
               onChange={(e) => setSelectedStaffFilter(e.target.value)}
-              className="px-3 py-1.5 text-[13px] bg-white border border-[#E5E7EB] rounded-lg text-[#374151] focus:outline-hidden"
+              className="px-2.5 py-1.5 text-[12px] sm:text-[13px] bg-white border border-[#E5E7EB] rounded-lg text-[#374151] focus:outline-hidden"
             >
-              <option value="all">All Staff Members</option>
+              <option value="all">All Staff</option>
               {staffList.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -291,7 +320,7 @@ export const TaskDashboard: React.FC<TaskDashboardProps> = ({
             <select
               value={selectedStatusFilter}
               onChange={(e) => setSelectedStatusFilter(e.target.value)}
-              className="px-3 py-1.5 text-[13px] bg-white border border-[#E5E7EB] rounded-lg text-[#374151] focus:outline-hidden"
+              className="px-2.5 py-1.5 text-[12px] sm:text-[13px] bg-white border border-[#E5E7EB] rounded-lg text-[#374151] focus:outline-hidden"
             >
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
@@ -299,8 +328,8 @@ export const TaskDashboard: React.FC<TaskDashboardProps> = ({
               <option value="completed">Completed</option>
             </select>
 
-            {/* View Switcher */}
-            <div className="flex items-center bg-[#F3F4F6] rounded-lg p-0.5 border border-[#E5E7EB]">
+            {/* View Switcher on Desktop */}
+            <div className="hidden sm:flex items-center bg-[#F3F4F6] rounded-lg p-0.5 border border-[#E5E7EB]">
               <button
                 onClick={() => setViewMode("table")}
                 className={`p-1.5 rounded-md text-[12px] font-medium transition-colors ${
@@ -329,15 +358,15 @@ export const TaskDashboard: React.FC<TaskDashboardProps> = ({
 
         {/* Content Area */}
         {filteredTasks.length === 0 ? (
-          <div className="py-16 text-center space-y-4">
+          <div className="py-12 sm:py-16 text-center space-y-4 px-4">
             <div className="w-12 h-12 rounded-full bg-[#EEF2FF] text-[#4F46E5] flex items-center justify-center mx-auto">
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-[15px] font-semibold text-[#111827]">
+              <p className="text-[14px] sm:text-[15px] font-semibold text-[#111827]">
                 No tasks found
               </p>
-              <p className="text-[13px] text-[#6B7280] mt-1 max-w-sm mx-auto">
+              <p className="text-[12px] sm:text-[13px] text-[#6B7280] mt-1 max-w-sm mx-auto">
                 {tasks.length === 0
                   ? "Record your voice instructions to automatically assign tasks and WhatsApp team members."
                   : "No tasks matched your current filter criteria."}
@@ -346,155 +375,242 @@ export const TaskDashboard: React.FC<TaskDashboardProps> = ({
             <div className="flex items-center justify-center space-x-3 pt-2">
               <button
                 onClick={onOpenVoiceModal}
-                className="px-4 py-2 text-[13px] font-semibold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-lg shadow-sm shadow-indigo-200 transition-all"
+                className="px-4 py-2 text-[12px] sm:text-[13px] font-semibold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-lg shadow-sm shadow-indigo-200 transition-all"
               >
                 Record Voice Task
               </button>
               <button
                 onClick={onOpenManualTaskModal}
-                className="px-4 py-2 text-[13px] font-medium text-[#374151] bg-white border border-[#E5E7EB] hover:bg-[#F9FAFB] rounded-lg transition-colors"
+                className="px-4 py-2 text-[12px] sm:text-[13px] font-medium text-[#374151] bg-white border border-[#E5E7EB] hover:bg-[#F9FAFB] rounded-lg transition-colors"
               >
                 Add Manually
               </button>
             </div>
           </div>
         ) : viewMode === "table" ? (
-          /* Table View */
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[12px] font-semibold text-[#6B7280]">
-                  <th className="py-3 px-4">Task Details</th>
-                  <th className="py-3 px-4">Assigned Staff</th>
-                  <th className="py-3 px-4">Priority</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Due Date</th>
-                  <th className="py-3 px-4">WhatsApp</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E5E7EB] text-[13px]">
-                {filteredTasks.map((task) => (
-                  <tr
-                    key={task.id}
-                    className="hover:bg-[#F9FAFB] transition-colors"
-                  >
-                    {/* Task Title & Description */}
-                    <td className="py-3 px-4 max-w-xs">
-                      <div>
-                        <span className={`font-medium text-[#111827] block ${task.status === "completed" ? "line-through text-[#9CA3AF]" : ""}`}>
-                          {task.title}
+          <>
+            {/* Mobile Card List View (Visible only on small screens) */}
+            <div className="block md:hidden divide-y divide-[#E5E7EB]">
+              {filteredTasks.map((task) => (
+                <div key={task.id} className="p-3.5 space-y-2.5 hover:bg-[#F9FAFB] transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <p className={`font-semibold text-[13px] text-[#111827] leading-snug ${task.status === "completed" ? "line-through text-[#9CA3AF]" : ""}`}>
+                        {task.title}
+                      </p>
+                      {task.description && (
+                        <p className="text-[11px] text-[#6B7280] mt-0.5 line-clamp-2">
+                          {task.description}
+                        </p>
+                      )}
+                    </div>
+                    {getPriorityBadge(task.priority)}
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] pt-1">
+                    <div className="flex items-center space-x-1.5">
+                      <div className="w-5 h-5 rounded-full bg-[#4F46E5] text-white flex items-center justify-center text-[9px] font-bold">
+                        {task.assignedStaffName[0]}
+                      </div>
+                      <span className="font-medium text-[#111827]">{task.assignedStaffName}</span>
+                      <span className="text-[#9CA3AF]">•</span>
+                      <span className="text-[#6B7280]">{task.dueDate || "Today"}</span>
+                    </div>
+
+                    {/* WhatsApp Badge */}
+                    <div>
+                      {task.whatsappSent ? (
+                        <span className="inline-flex items-center text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded-full border border-emerald-200">
+                          <Check className="w-2.5 h-2.5 mr-0.5" /> Sent
                         </span>
-                        {task.description && (
-                          <span className="text-[11px] text-[#6B7280] line-clamp-1">
-                            {task.description}
-                          </span>
-                        )}
-                        {task.sourceVoiceTranscription && (
-                          <span className="text-[10px] text-[#4F46E5] inline-flex items-center mt-0.5">
-                            <Sparkles className="w-2.5 h-2.5 mr-1" /> Voice AI
-                          </span>
-                        )}
-                      </div>
-                    </td>
+                      ) : (
+                        <span className="inline-flex items-center text-[10px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.2 rounded-full">
+                          Not Sent
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-                    {/* Assigned Staff */}
-                    <td className="py-3 px-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-7 h-7 rounded-full bg-[#4F46E5] text-white flex items-center justify-center text-[11px] font-bold">
-                          {task.assignedStaffName[0]}
-                        </div>
-                        <div>
-                          <span className="font-medium text-[#111827] block text-[13px]">
-                            {task.assignedStaffName}
-                          </span>
-                          <span className="text-[11px] text-[#6B7280] font-mono">
-                            +{task.assignedStaffPhone}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
+                  {/* Actions Bar */}
+                  <div className="flex items-center justify-between pt-2 border-t border-[#F3F4F6]">
+                    <select
+                      value={task.status}
+                      onChange={(e) => handleStatusChange(task.id, e.target.value as TaskStatus)}
+                      className="text-[11px] font-medium py-1 px-2 rounded-md border border-[#E5E7EB] bg-white text-[#374151] focus:outline-hidden"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
 
-                    {/* Priority */}
-                    <td className="py-3 px-4">
-                      {getPriorityBadge(task.priority)}
-                    </td>
-
-                    {/* Status Dropdown */}
-                    <td className="py-3 px-4">
-                      <select
-                        value={task.status}
-                        onChange={(e) => handleStatusChange(task.id, e.target.value as TaskStatus)}
-                        className="text-[12px] font-medium py-1 px-2 rounded-lg border border-[#E5E7EB] bg-white text-[#374151] focus:outline-hidden focus:border-[#4F46E5]"
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => handleResendWhatsApp(task)}
+                        disabled={sendingWhatsAppId === task.id}
+                        className="px-2 py-1 text-[11px] font-medium text-[#4F46E5] bg-[#EEF2FF] rounded-md hover:bg-indigo-100 transition-colors flex items-center space-x-1"
+                        title="Resend WhatsApp"
                       >
-                        <option value="pending">Pending</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                    </td>
+                        <Send className={`w-3 h-3 ${sendingWhatsAppId === task.id ? "animate-spin" : ""}`} />
+                        <span>Send WA</span>
+                      </button>
 
-                    {/* Due Date */}
-                    <td className="py-3 px-4 text-[#6B7280] text-[12px]">
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="w-3.5 h-3.5 text-[#9CA3AF]" />
-                        <span>{task.dueDate || "Today"}</span>
-                      </div>
-                    </td>
+                      <button
+                        onClick={() => onEditTask(task)}
+                        className="p-1 text-[#6B7280] hover:text-[#4F46E5] rounded hover:bg-[#EEF2FF]"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
 
-                    {/* WhatsApp Status & Resend */}
-                    <td className="py-3 px-4">
-                      <div className="flex items-center space-x-2">
-                        {task.whatsappSent ? (
-                          <span className="inline-flex items-center text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                            <Check className="w-3 h-3 mr-1" /> Sent
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center text-[11px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                            Not Sent
-                          </span>
-                        )}
+                      <button
+                        onClick={() => handleDelete(task.id, task.title)}
+                        className="p-1 text-[#6B7280] hover:text-red-600 rounded hover:bg-red-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
 
-                        <button
-                          onClick={() => handleResendWhatsApp(task)}
-                          disabled={sendingWhatsAppId === task.id}
-                          className="p-1 rounded-md text-[#6B7280] hover:text-[#4F46E5] hover:bg-[#EEF2FF] transition-colors"
-                          title="Resend WhatsApp notification"
-                        >
-                          <Send className={`w-3.5 h-3.5 ${sendingWhatsAppId === task.id ? "animate-spin text-[#4F46E5]" : ""}`} />
-                        </button>
-                      </div>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end space-x-1">
-                        <button
-                          onClick={() => onEditTask(task)}
-                          className="p-1.5 rounded-lg text-[#6B7280] hover:text-[#4F46E5] hover:bg-[#EEF2FF] transition-colors"
-                          title="Edit Task"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(task.id, task.title)}
-                          className="p-1.5 rounded-lg text-[#6B7280] hover:text-red-600 hover:bg-red-50 transition-colors"
-                          title="Delete Task"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[12px] font-semibold text-[#6B7280]">
+                    <th className="py-3 px-4">Task Details</th>
+                    <th className="py-3 px-4">Assigned Staff</th>
+                    <th className="py-3 px-4">Priority</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Due Date</th>
+                    <th className="py-3 px-4">WhatsApp</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-[#E5E7EB] text-[13px]">
+                  {filteredTasks.map((task) => (
+                    <tr
+                      key={task.id}
+                      className="hover:bg-[#F9FAFB] transition-colors"
+                    >
+                      {/* Task Title & Description */}
+                      <td className="py-3 px-4 max-w-xs">
+                        <div>
+                          <span className={`font-medium text-[#111827] block ${task.status === "completed" ? "line-through text-[#9CA3AF]" : ""}`}>
+                            {task.title}
+                          </span>
+                          {task.description && (
+                            <span className="text-[11px] text-[#6B7280] line-clamp-1">
+                              {task.description}
+                            </span>
+                          )}
+                          {task.sourceVoiceTranscription && (
+                            <span className="text-[10px] text-[#4F46E5] inline-flex items-center mt-0.5">
+                              <Sparkles className="w-2.5 h-2.5 mr-1" /> Voice AI
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Assigned Staff */}
+                      <td className="py-3 px-4">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-7 h-7 rounded-full bg-[#4F46E5] text-white flex items-center justify-center text-[11px] font-bold">
+                            {task.assignedStaffName[0]}
+                          </div>
+                          <div>
+                            <span className="font-medium text-[#111827] block text-[13px]">
+                              {task.assignedStaffName}
+                            </span>
+                            <span className="text-[11px] text-[#6B7280] font-mono">
+                              +{task.assignedStaffPhone}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Priority */}
+                      <td className="py-3 px-4">
+                        {getPriorityBadge(task.priority)}
+                      </td>
+
+                      {/* Status Dropdown */}
+                      <td className="py-3 px-4">
+                        <select
+                          value={task.status}
+                          onChange={(e) => handleStatusChange(task.id, e.target.value as TaskStatus)}
+                          className="text-[12px] font-medium py-1 px-2 rounded-lg border border-[#E5E7EB] bg-white text-[#374151] focus:outline-hidden focus:border-[#4F46E5]"
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </td>
+
+                      {/* Due Date */}
+                      <td className="py-3 px-4 text-[#6B7280] text-[12px]">
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="w-3.5 h-3.5 text-[#9CA3AF]" />
+                          <span>{task.dueDate || "Today"}</span>
+                        </div>
+                      </td>
+
+                      {/* WhatsApp Status & Resend */}
+                      <td className="py-3 px-4">
+                        <div className="flex items-center space-x-2">
+                          {task.whatsappSent ? (
+                            <span className="inline-flex items-center text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                              <Check className="w-3 h-3 mr-1" /> Sent
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center text-[11px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                              Not Sent
+                            </span>
+                          )}
+
+                          <button
+                            onClick={() => handleResendWhatsApp(task)}
+                            disabled={sendingWhatsAppId === task.id}
+                            className="p-1 rounded-md text-[#6B7280] hover:text-[#4F46E5] hover:bg-[#EEF2FF] transition-colors"
+                            title="Resend WhatsApp notification"
+                          >
+                            <Send className={`w-3.5 h-3.5 ${sendingWhatsAppId === task.id ? "animate-spin text-[#4F46E5]" : ""}`} />
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end space-x-1">
+                          <button
+                            onClick={() => onEditTask(task)}
+                            className="p-1.5 rounded-lg text-[#6B7280] hover:text-[#4F46E5] hover:bg-[#EEF2FF] transition-colors"
+                            title="Edit Task"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(task.id, task.title)}
+                            className="p-1.5 rounded-lg text-[#6B7280] hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Delete Task"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         ) : (
           /* Kanban Board View */
-          <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4 bg-[#F9FAFB]">
+          <div className="p-3.5 sm:p-5 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 bg-[#F9FAFB]">
             {/* Pending Column */}
-            <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 flex flex-col space-y-3 shadow-xs">
+            <div className="bg-white rounded-xl border border-[#E5E7EB] p-3.5 sm:p-4 flex flex-col space-y-3 shadow-2xs">
               <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-2">
                 <span className="text-[13px] font-bold text-[#111827] flex items-center space-x-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
@@ -505,16 +621,16 @@ export const TaskDashboard: React.FC<TaskDashboardProps> = ({
                 </span>
               </div>
 
-              <div className="space-y-3 min-h-[200px]">
+              <div className="space-y-2.5 sm:space-y-3 min-h-[160px]">
                 {filteredTasks
                   .filter((t) => t.status === "pending")
                   .map((task) => (
                     <div
                       key={task.id}
-                      className="p-3.5 bg-white border border-[#E5E7EB] rounded-lg shadow-xs space-y-2.5 hover:border-indigo-200 transition-all"
+                      className="p-3 bg-white border border-[#E5E7EB] rounded-lg shadow-2xs space-y-2 hover:border-indigo-200 transition-all"
                     >
                       <div className="flex items-start justify-between">
-                        <p className="text-[13px] font-semibold text-[#111827] line-clamp-2">
+                        <p className="text-[12px] sm:text-[13px] font-semibold text-[#111827] line-clamp-2">
                           {task.title}
                         </p>
                         {getPriorityBadge(task.priority)}
@@ -536,7 +652,7 @@ export const TaskDashboard: React.FC<TaskDashboardProps> = ({
             </div>
 
             {/* In Progress Column */}
-            <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 flex flex-col space-y-3 shadow-xs">
+            <div className="bg-white rounded-xl border border-[#E5E7EB] p-3.5 sm:p-4 flex flex-col space-y-3 shadow-2xs">
               <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-2">
                 <span className="text-[13px] font-bold text-[#111827] flex items-center space-x-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#4F46E5]"></span>
@@ -547,16 +663,16 @@ export const TaskDashboard: React.FC<TaskDashboardProps> = ({
                 </span>
               </div>
 
-              <div className="space-y-3 min-h-[200px]">
+              <div className="space-y-2.5 sm:space-y-3 min-h-[160px]">
                 {filteredTasks
                   .filter((t) => t.status === "in_progress")
                   .map((task) => (
                     <div
                       key={task.id}
-                      className="p-3.5 bg-white border border-[#E5E7EB] rounded-lg shadow-xs space-y-2.5 hover:border-indigo-200 transition-all"
+                      className="p-3 bg-white border border-[#E5E7EB] rounded-lg shadow-2xs space-y-2 hover:border-indigo-200 transition-all"
                     >
                       <div className="flex items-start justify-between">
-                        <p className="text-[13px] font-semibold text-[#111827] line-clamp-2">
+                        <p className="text-[12px] sm:text-[13px] font-semibold text-[#111827] line-clamp-2">
                           {task.title}
                         </p>
                         {getPriorityBadge(task.priority)}
@@ -578,7 +694,7 @@ export const TaskDashboard: React.FC<TaskDashboardProps> = ({
             </div>
 
             {/* Completed Column */}
-            <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 flex flex-col space-y-3 shadow-xs">
+            <div className="bg-white rounded-xl border border-[#E5E7EB] p-3.5 sm:p-4 flex flex-col space-y-3 shadow-2xs">
               <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-2">
                 <span className="text-[13px] font-bold text-[#111827] flex items-center space-x-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
@@ -589,16 +705,16 @@ export const TaskDashboard: React.FC<TaskDashboardProps> = ({
                 </span>
               </div>
 
-              <div className="space-y-3 min-h-[200px]">
+              <div className="space-y-2.5 sm:space-y-3 min-h-[160px]">
                 {filteredTasks
                   .filter((t) => t.status === "completed")
                   .map((task) => (
                     <div
                       key={task.id}
-                      className="p-3.5 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg space-y-2.5 opacity-80"
+                      className="p-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg space-y-2 opacity-80"
                     >
                       <div className="flex items-start justify-between">
-                        <p className="text-[13px] font-medium text-[#6B7280] line-through line-clamp-2">
+                        <p className="text-[12px] sm:text-[13px] font-medium text-[#6B7280] line-through line-clamp-2">
                           {task.title}
                         </p>
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />

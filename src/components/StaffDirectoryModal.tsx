@@ -119,16 +119,16 @@ export const StaffDirectoryModal: React.FC<StaffDirectoryModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl border border-[#E5E7EB] flex flex-col max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
+      <div className="bg-white sm:rounded-2xl w-full max-w-4xl shadow-2xl border-0 sm:border border-[#E5E7EB] flex flex-col h-full sm:h-auto sm:max-h-[90vh] overflow-hidden">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-[#E5E7EB] flex items-center justify-between bg-white">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[#E5E7EB] flex items-center justify-between bg-white shrink-0">
           <div>
-            <h2 className="text-[18px] sm:text-[20px] font-bold text-[#111827]">
-              Staff Directory & Contact Numbers
+            <h2 className="text-[16px] sm:text-[20px] font-bold text-[#111827]">
+              Staff Directory & Contacts
             </h2>
-            <p className="text-[13px] text-[#6B7280]">
-              Save contacts once. Gemini will match your voice with these names and dispatch WhatsApp tasks automatically.
+            <p className="text-[11px] sm:text-[13px] text-[#6B7280]">
+              Save contacts once for AI voice matching and WhatsApp dispatch.
             </p>
           </div>
           <button
@@ -140,7 +140,7 @@ export const StaffDirectoryModal: React.FC<StaffDirectoryModalProps> = ({
         </div>
 
         {/* Modal Content */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-[#F9FAFB]">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 flex-1 bg-[#F9FAFB]">
           {/* Add / Edit Form Card */}
           <div className="bg-white p-5 rounded-xl border border-[#E5E7EB] shadow-xs">
             <div className="flex items-center justify-between mb-4">

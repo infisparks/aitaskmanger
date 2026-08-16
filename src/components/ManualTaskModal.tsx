@@ -113,11 +113,11 @@ export const ManualTaskModal: React.FC<ManualTaskModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-[#E5E7EB] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
+      <div className="bg-white sm:rounded-2xl w-full max-w-lg shadow-2xl border-0 sm:border border-[#E5E7EB] overflow-hidden flex flex-col h-full sm:h-auto max-h-none sm:max-h-[90vh]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-[#E5E7EB] flex items-center justify-between">
-          <h3 className="text-[17px] font-bold text-[#111827]">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[#E5E7EB] flex items-center justify-between shrink-0">
+          <h3 className="text-[16px] sm:text-[17px] font-bold text-[#111827]">
             {editingTask ? "Edit Task" : "Create New Task"}
           </h3>
           <button
@@ -129,7 +129,7 @@ export const ManualTaskModal: React.FC<ManualTaskModalProps> = ({
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
           {errorMsg && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-[13px] text-red-600">
               {errorMsg}

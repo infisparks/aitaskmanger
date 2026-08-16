@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { VoiceParsingResponse, StaffContact, ParsedStaffTask, TaskPriority } from "@/types";
 import { createBatchTasks } from "@/lib/firebase";
-import { formatStaffWhatsAppMessage, sendWhatsAppMessage } from "@/lib/whatsapp";
+import { formatStaffWhatsAppMessage, sendWhatsAppMessage, openWhatsAppDirectLink } from "@/lib/whatsapp";
 import confetti from "canvas-confetti";
 import {
   Sparkles,
@@ -19,7 +19,8 @@ import {
   X,
   ArrowRight,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  ExternalLink
 } from "lucide-react";
 
 interface TaskVerificationPipelineProps {
@@ -84,6 +85,7 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
     const updated = [...assignments];
     updated[staffIndex].tasks.push({
       title: "New task",
+      description: "",
       priority: "medium",
       dueDate: "Today",
     });
@@ -214,21 +216,21 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
   const totalTasksCount = assignments.reduce((acc, a) => acc + a.tasks.length, 0);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl border border-[#E5E7EB] flex flex-col max-h-[92vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
+      <div className="bg-white sm:rounded-2xl w-full max-w-5xl shadow-2xl border-0 sm:border border-[#E5E7EB] flex flex-col h-full sm:h-auto sm:max-h-[92vh] overflow-hidden">
         {/* Header with Pipeline Stepper */}
-        <div className="px-6 py-4 border-b border-[#E5E7EB] bg-white">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[#E5E7EB] bg-white shrink-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-lg bg-[#EEF2FF] flex items-center justify-center text-[#4F46E5]">
+            <div className="flex items-center space-x-2 sm:space-x-2.5">
+              <div className="w-7 h-7 sm:w-8 h-8 rounded-lg bg-[#EEF2FF] flex items-center justify-center text-[#4F46E5] shrink-0">
                 <ShieldCheck className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-[17px] font-bold text-[#111827]">
-                  Verify & Dispatch Task Pipeline
+                <h3 className="text-[15px] sm:text-[17px] font-bold text-[#111827] leading-tight">
+                  Verify & Dispatch Tasks
                 </h3>
-                <p className="text-[12px] text-[#6B7280]">
-                  Review voice transcription and matched staff contacts before sending
+                <p className="text-[11px] sm:text-[12px] text-[#6B7280] line-clamp-1">
+                  Review assignments before sending WhatsApp broadcast
                 </p>
               </div>
             </div>
@@ -242,23 +244,23 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
           </div>
 
           {/* Lite Pipeline Indicator */}
-          <div className="mt-4 pt-3 border-t border-[#F3F4F6] flex items-center justify-between text-[12px]">
-            <div className="flex items-center space-x-2 text-emerald-600 font-medium">
-              <span className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-[11px] font-bold">
+          <div className="mt-3 pt-2.5 border-t border-[#F3F4F6] flex items-center justify-between text-[11px] sm:text-[12px] overflow-x-auto">
+            <div className="flex items-center space-x-1.5 text-emerald-600 font-medium whitespace-nowrap">
+              <span className="w-4 h-4 sm:w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] sm:text-[11px] font-bold">
                 1
               </span>
               <span>Voice Transcribed</span>
             </div>
-            <ArrowRight className="w-4 h-4 text-[#9CA3AF]" />
-            <div className="flex items-center space-x-2 text-[#4F46E5] font-semibold">
-              <span className="w-5 h-5 rounded-full bg-[#EEF2FF] flex items-center justify-center text-[11px] font-bold">
+            <ArrowRight className="w-3.5 h-3.5 text-[#9CA3AF] shrink-0 mx-1" />
+            <div className="flex items-center space-x-1.5 text-[#4F46E5] font-semibold whitespace-nowrap">
+              <span className="w-4 h-4 sm:w-5 h-5 rounded-full bg-[#EEF2FF] flex items-center justify-center text-[10px] sm:text-[11px] font-bold">
                 2
               </span>
-              <span>Review Assignments</span>
+              <span>Review Tasks</span>
             </div>
-            <ArrowRight className="w-4 h-4 text-[#9CA3AF]" />
-            <div className="flex items-center space-x-2 text-[#6B7280]">
-              <span className="w-5 h-5 rounded-full bg-[#F3F4F6] flex items-center justify-center text-[11px] font-bold">
+            <ArrowRight className="w-3.5 h-3.5 text-[#9CA3AF] shrink-0 mx-1" />
+            <div className="flex items-center space-x-1.5 text-[#6B7280] whitespace-nowrap">
+              <span className="w-4 h-4 sm:w-5 h-5 rounded-full bg-[#F3F4F6] flex items-center justify-center text-[10px] sm:text-[11px] font-bold">
                 3
               </span>
               <span>WhatsApp Dispatch</span>
@@ -267,23 +269,23 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-[#F9FAFB]">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 flex-1 bg-[#F9FAFB]">
           {/* Voice Transcription Box */}
-          <div className="bg-white p-4 rounded-xl border border-[#E5E7EB] shadow-xs">
+          <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-[#E5E7EB] shadow-2xs">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[12px] font-semibold text-[#6B7280] uppercase tracking-wider flex items-center space-x-1.5">
+              <span className="text-[11px] sm:text-[12px] font-semibold text-[#6B7280] uppercase tracking-wider flex items-center space-x-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-[#4F46E5]" />
-                <span>Original Spoken Voice Note (Verbatim)</span>
+                <span>Original Voice Note</span>
               </span>
-              <span className="text-[11px] bg-indigo-50 text-[#4F46E5] px-2 py-0.5 rounded-full font-medium">
-                Gemini Audio Ingestion
+              <span className="text-[10px] sm:text-[11px] bg-indigo-50 text-[#4F46E5] px-2 py-0.5 rounded-full font-medium">
+                Gemini 3.7 Flash
               </span>
             </div>
-            <p className="text-[13px] text-[#111827] bg-[#F9FAFB] p-3 rounded-lg border border-[#E5E7EB] italic font-mono leading-relaxed">
+            <p className="text-[12px] sm:text-[13px] text-[#111827] bg-[#F9FAFB] p-2.5 sm:p-3 rounded-lg border border-[#E5E7EB] italic font-mono leading-relaxed">
               "{parsingResult.rawTranscription || "No speech detected"}"
             </p>
             {parsingResult.summary && (
-              <p className="text-[12px] text-[#4B5563] mt-2 font-medium">
+              <p className="text-[11px] sm:text-[12px] text-[#4B5563] mt-2 font-medium">
                 💡 <strong>AI Summary:</strong> {parsingResult.summary}
               </p>
             )}
@@ -291,11 +293,11 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
 
           {/* Unmatched Warnings if any */}
           {parsingResult.unmatchedTasks && parsingResult.unmatchedTasks.length > 0 && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[13px] text-amber-800 flex items-start space-x-2">
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[12px] sm:text-[13px] text-amber-800 flex items-start space-x-2">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
               <div>
-                <p className="font-semibold">Unassigned Tasks Detected in Voice:</p>
-                <ul className="list-disc pl-4 mt-1 text-[12px] space-y-0.5">
+                <p className="font-semibold">Unassigned Tasks Detected:</p>
+                <ul className="list-disc pl-4 mt-1 text-[11px] sm:text-[12px] space-y-0.5">
                   {parsingResult.unmatchedTasks.map((ut, idx) => (
                     <li key={idx}>{ut}</li>
                   ))}
@@ -307,17 +309,17 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
           {/* Staff Assignment Cards */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-[14px] font-bold text-[#111827]">
-                Matched Team Members & Task Assignments ({assignments.length} People, {totalTasksCount} Tasks)
+              <h4 className="text-[13px] sm:text-[14px] font-bold text-[#111827]">
+                Matched Team Members ({assignments.length} People, {totalTasksCount} Tasks)
               </h4>
-              <span className="text-[12px] text-[#6B7280]">
+              <span className="text-[11px] text-[#6B7280] hidden sm:inline">
                 Edit titles, priorities, or add tasks before broadcasting
               </span>
             </div>
 
             {assignments.length === 0 ? (
-              <div className="bg-white p-8 rounded-xl border border-[#E5E7EB] text-center text-[#6B7280] text-[13px]">
-                No staff members were matched from the voice note. Make sure the names spoken match the registered names in your Staff Directory.
+              <div className="bg-white p-6 sm:p-8 rounded-xl border border-[#E5E7EB] text-center text-[#6B7280] text-[13px]">
+                No staff members were matched from the voice note. Please ensure the names match your registered Staff Directory.
               </div>
             ) : (
               assignments.map((assignment, staffIdx) => {
@@ -326,35 +328,35 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
                 return (
                   <div
                     key={assignment.staffId || staffIdx}
-                    className="bg-white rounded-xl border border-[#E5E7EB] shadow-xs overflow-hidden transition-all hover:border-indigo-200"
+                    className="bg-white rounded-xl border border-[#E5E7EB] shadow-2xs overflow-hidden transition-all hover:border-indigo-200"
                   >
                     {/* Staff Header Card */}
-                    <div className="px-5 py-3.5 bg-[#F9FAFB] border-b border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-[#4F46E5] text-white flex items-center justify-center text-[12px] font-bold">
+                    <div className="px-4 sm:px-5 py-3 bg-[#F9FAFB] border-b border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div className="flex items-center space-x-2.5 sm:space-x-3">
+                        <div className="w-8 h-8 rounded-full bg-[#4F46E5] text-white flex items-center justify-center text-[12px] font-bold shrink-0">
                           {assignment.staffName[0]}
                         </div>
                         <div>
-                          <div className="flex items-center space-x-2">
-                            <span className="font-bold text-[14px] text-[#111827]">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-bold text-[13px] sm:text-[14px] text-[#111827]">
                               {assignment.staffName}
                             </span>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <UserCheck className="w-3 h-3 mr-1" />
+                            <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <UserCheck className="w-2.5 h-2.5 mr-0.5" />
                               Matched from "{assignment.matchedSpokenName}"
                             </span>
                           </div>
-                          <div className="flex items-center space-x-2 text-[12px] text-[#6B7280] font-mono mt-0.5">
-                            <Phone className="w-3 h-3 text-emerald-600" />
+                          <div className="flex items-center space-x-1.5 text-[11px] sm:text-[12px] text-[#6B7280] font-mono mt-0.5">
+                            <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
                             <span>+{assignment.staffPhone}</span>
                           </div>
                         </div>
                       </div>
 
                       {/* Reassign / Status Actions */}
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center justify-between sm:justify-end space-x-2 pt-1 sm:pt-0 border-t sm:border-t-0 border-[#E5E7EB]">
                         {statusObj && (
-                          <div className="text-[12px]">
+                          <div className="text-[11px] sm:text-[12px]">
                             {statusObj.status === "sending" && (
                               <span className="text-[#4F46E5] animate-pulse font-medium">
                                 Sending WhatsApp...
@@ -362,13 +364,25 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
                             )}
                             {statusObj.status === "success" && (
                               <span className="text-emerald-600 font-medium flex items-center">
-                                <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Sent via WhatsApp
+                                <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> WhatsApp Sent
                               </span>
                             )}
                             {statusObj.status === "failed" && (
-                              <span className="text-red-600 font-medium flex items-center" title={statusObj.error}>
-                                <AlertCircle className="w-3.5 h-3.5 mr-1" /> Failed
-                              </span>
+                              <div className="flex items-center space-x-1.5">
+                                <span className="text-red-600 font-medium flex items-center" title={statusObj.error}>
+                                  <AlertCircle className="w-3.5 h-3.5 mr-0.5" /> Send Error
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    const msg = formatStaffWhatsAppMessage(assignment.staffName, assignment.tasks);
+                                    openWhatsAppDirectLink(assignment.staffPhone, msg);
+                                  }}
+                                  className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-600 text-white rounded-md flex items-center space-x-1"
+                                >
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                  <span>Open WhatsApp</span>
+                                </button>
+                              </div>
                             )}
                           </div>
                         )}
@@ -376,12 +390,12 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
                         <select
                           value={assignment.staffId}
                           onChange={(e) => handleReassignStaff(staffIdx, e.target.value)}
-                          className="text-[12px] px-2 py-1 bg-white border border-[#E5E7EB] rounded-md text-[#374151] focus:outline-hidden"
+                          className="text-[11px] sm:text-[12px] px-2 py-1 bg-white border border-[#E5E7EB] rounded-md text-[#374151] focus:outline-hidden"
                           title="Change assigned person"
                         >
                           {staffList.map((s) => (
                             <option key={s.id} value={s.id}>
-                              Reassign to: {s.name}
+                              Reassign: {s.name}
                             </option>
                           ))}
                         </select>
@@ -389,28 +403,30 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
                     </div>
 
                     {/* Task Items List */}
-                    <div className="p-4 space-y-3">
+                    <div className="p-3 sm:p-4 space-y-2.5 sm:space-y-3">
                       {assignment.tasks.map((task, taskIdx) => (
                         <div
                           key={taskIdx}
-                          className="flex flex-col gap-2 p-3 bg-white border border-[#E5E7EB] rounded-xl hover:border-indigo-200 transition-colors shadow-2xs"
+                          className="flex flex-col gap-2 p-2.5 sm:p-3 bg-white border border-[#E5E7EB] rounded-xl hover:border-indigo-200 transition-colors shadow-2xs"
                         >
-                          <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-full bg-[#EEF2FF] text-[#4F46E5] text-[11px] font-bold flex items-center justify-center shrink-0">
-                              {taskIdx + 1}
-                            </span>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <div className="flex items-center space-x-2 flex-1">
+                              <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#EEF2FF] text-[#4F46E5] text-[10px] sm:text-[11px] font-bold flex items-center justify-center shrink-0">
+                                {taskIdx + 1}
+                              </span>
 
-                            {/* Editable Task Title */}
-                            <input
-                              type="text"
-                              value={task.title}
-                              onChange={(e) => handleTaskTitleChange(staffIdx, taskIdx, e.target.value)}
-                              className="flex-1 text-[13px] font-semibold text-[#111827] bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg px-2.5 py-1.5 focus:outline-hidden focus:border-[#4F46E5] focus:bg-white"
-                              placeholder="Actionable Task Title..."
-                            />
+                              {/* Editable Task Title */}
+                              <input
+                                type="text"
+                                value={task.title}
+                                onChange={(e) => handleTaskTitleChange(staffIdx, taskIdx, e.target.value)}
+                                className="w-full text-[12px] sm:text-[13px] font-semibold text-[#111827] bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg px-2.5 py-1.5 focus:outline-hidden focus:border-[#4F46E5] focus:bg-white"
+                                placeholder="Task Title..."
+                              />
+                            </div>
 
                             {/* Controls: Priority & Due Date */}
-                            <div className="flex items-center space-x-2 shrink-0">
+                            <div className="flex items-center justify-between sm:justify-end space-x-2 shrink-0 pl-7 sm:pl-0">
                               <select
                                 value={task.priority}
                                 onChange={(e) => handleTaskPriorityChange(staffIdx, taskIdx, e.target.value as TaskPriority)}
@@ -427,7 +443,7 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
                                 value={task.dueDate || "Today"}
                                 onChange={(e) => handleTaskDueDateChange(staffIdx, taskIdx, e.target.value)}
                                 placeholder="Due date"
-                                className="w-24 text-[11px] px-2 py-1.5 rounded-lg border border-[#E5E7EB] bg-white text-[#374151] focus:outline-hidden text-center"
+                                className="w-20 sm:w-24 text-[11px] px-2 py-1.5 rounded-lg border border-[#E5E7EB] bg-white text-[#374151] focus:outline-hidden text-center"
                               />
 
                               <button
@@ -441,13 +457,13 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
                           </div>
 
                           {/* Editable Description / Detail */}
-                          <div className="pl-8">
+                          <div className="pl-7 sm:pl-8">
                             <input
                               type="text"
                               value={task.description || ""}
                               onChange={(e) => handleTaskDescriptionChange(staffIdx, taskIdx, e.target.value)}
                               placeholder="Task instructions, details, or context..."
-                              className="w-full text-[12px] text-[#4B5563] bg-transparent border-b border-dashed border-[#E5E7EB] hover:border-[#D1D5DB] focus:border-[#4F46E5] px-1 py-1 focus:outline-hidden"
+                              className="w-full text-[11px] sm:text-[12px] text-[#4B5563] bg-transparent border-b border-dashed border-[#E5E7EB] hover:border-[#D1D5DB] focus:border-[#4F46E5] px-1 py-1 focus:outline-hidden"
                             />
                           </div>
                         </div>
@@ -456,7 +472,7 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
                       {/* Add Task Sub-button */}
                       <button
                         onClick={() => handleAddTask(staffIdx)}
-                        className="text-[12px] text-[#4F46E5] hover:text-[#4338CA] font-medium flex items-center space-x-1 mt-2 transition-colors"
+                        className="text-[11px] sm:text-[12px] text-[#4F46E5] hover:text-[#4338CA] font-medium flex items-center space-x-1 mt-1 transition-colors"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Add another task for {assignment.staffName}</span>
@@ -469,31 +485,31 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
           </div>
         </div>
 
-        {/* Modal Footer with Instant Assign & WhatsApp Broadcast */}
-        <div className="px-6 py-4 border-t border-[#E5E7EB] bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="text-[12px] text-[#6B7280]">
-            ⚡ Tasks will be saved in Firebase and delivered to WhatsApp immediately.
+        {/* Modal Footer */}
+        <div className="p-3 sm:px-6 sm:py-4 border-t border-[#E5E7EB] bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 shrink-0">
+          <div className="text-[11px] sm:text-[12px] text-[#6B7280] text-center sm:text-left">
+            ⚡ Direct client-side dispatch with instant WhatsApp notification.
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
             <button
               onClick={() => handleConfirmAndDispatch(false)}
               disabled={isDispatching || assignments.length === 0}
-              className="px-4 py-2 text-[13px] font-medium text-[#374151] bg-[#F3F4F6] hover:bg-[#E5E7EB] rounded-lg transition-colors disabled:opacity-50"
+              className="w-full sm:w-auto px-3 sm:px-4 py-2.5 sm:py-2 text-[12px] sm:text-[13px] font-medium text-[#374151] bg-[#F3F4F6] hover:bg-[#E5E7EB] rounded-lg transition-colors disabled:opacity-50 text-center"
             >
-              Save to Board Only
+              Save to Board
             </button>
 
             <button
               onClick={() => handleConfirmAndDispatch(true)}
               disabled={isDispatching || assignments.length === 0}
-              className="px-5 py-2 text-[13px] font-semibold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-lg shadow-sm shadow-indigo-200 transition-all flex items-center space-x-2 disabled:opacity-50"
+              className="w-full sm:w-auto px-4 sm:px-5 py-2.5 sm:py-2 text-[12px] sm:text-[13px] font-semibold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-lg shadow-sm shadow-indigo-200 transition-all flex items-center justify-center space-x-1.5 sm:space-x-2 disabled:opacity-50 text-center"
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>
                 {isDispatching
-                  ? "Assigning & Dispatching..."
-                  : `Assign & WhatsApp All (${assignments.length})`}
+                  ? "Sending..."
+                  : `Assign & WhatsApp (${assignments.length})`}
               </span>
             </button>
           </div>
