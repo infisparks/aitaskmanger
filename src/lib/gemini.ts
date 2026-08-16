@@ -1,6 +1,13 @@
 import { GoogleGenAI } from "@google/genai";
 import { StaffContact, VoiceParsingResponse } from "@/types";
 
+const CANDIDATE_MODELS = [
+  "gemini-3.7-flash",
+  "gemini-flash-lite-latest",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+];
+
 export async function parseAudioWithGeminiServer(
   audioBase64: string,
   mimeType: string,
@@ -60,44 +67,52 @@ You MUST respond ONLY with valid JSON in this exact structure without markdown f
   "unmatchedTasks": []
 }`;
 
-  try {
-    // We use gemini-2.5-flash or gemini-2.0-flash which supports audio input
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              inlineData: {
-                data: audioBase64,
-                mimeType: mimeType || "audio/webm",
+  let lastError: any = null;
+
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      console.log(`[Gemini Voice Parsing] Attempting model: ${modelName}...`);
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                inlineData: {
+                  data: audioBase64,
+                  mimeType: mimeType || "audio/webm",
+                },
               },
-            },
-            {
-              text: prompt,
-            },
-          ],
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+        config: {
+          responseMimeType: "application/json",
+          temperature: 0.2,
         },
-      ],
-      config: {
-        responseMimeType: "application/json",
-        temperature: 0.2,
-      },
-    });
+      });
 
-    const responseText = response.text || "";
-    // Clean potential markdown wrap
-    const cleanedJson = responseText
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/```$/i, "")
-      .trim();
+      const responseText = response.text || "";
+      // Clean potential markdown code blocks
+      const cleanedJson = responseText
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/```$/i, "")
+        .trim();
 
-    const parsed: VoiceParsingResponse = JSON.parse(cleanedJson);
-    return parsed;
-  } catch (err: any) {
-    console.error("Gemini audio parsing failed:", err);
-    throw err;
+      const parsed: VoiceParsingResponse = JSON.parse(cleanedJson);
+      console.log(`[Gemini Voice Parsing] Success with model: ${modelName}`);
+      return parsed;
+    } catch (err: any) {
+      console.warn(`[Gemini Voice Parsing] Model ${modelName} failed:`, err?.message || err);
+      lastError = err;
+      // If error is 404 or capacity spike, continue loop to try next candidate model
+    }
   }
+
+  throw lastError || new Error("All candidate Gemini models failed to process the audio.");
 }

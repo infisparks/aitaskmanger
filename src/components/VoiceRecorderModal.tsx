@@ -215,7 +215,7 @@ export const VoiceRecorderModal: React.FC<VoiceRecorderModalProps> = ({
                 Voice Task Assignment
               </h3>
               <p className="text-[12px] text-[#6B7280]">
-                Powered by Gemini 2.0 / 2.5 Flash Multimodal Audio
+                Powered by Gemini 3.7 Flash Multimodal Voice AI
               </p>
             </div>
           </div>

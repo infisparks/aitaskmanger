@@ -107,7 +107,7 @@ export default function Home() {
           <div className="relative z-10 max-w-2xl space-y-3">
             <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-md text-[12px] font-medium text-indigo-100 border border-white/15">
               <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-              <span>Gemini 2.0 Multimodal Voice + Evolution WhatsApp</span>
+              <span>Gemini 3.7 Flash Voice AI + Evolution WhatsApp</span>
             </div>
 
             <h2 className="text-[20px] sm:text-[24px] font-bold tracking-tight">
