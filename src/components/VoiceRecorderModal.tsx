@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { StaffContact, VoiceParsingResponse } from "@/types";
+import { parseAudioWithGeminiClient } from "@/lib/gemini";
 import { Mic, Square, Sparkles, X, Upload, AlertCircle, RefreshCw, Volume2, CheckCircle2 } from "lucide-react";
 
 interface VoiceRecorderModalProps {
@@ -169,28 +170,18 @@ export const VoiceRecorderModal: React.FC<VoiceRecorderModalProps> = ({
 
       setProcessingStep("Transcribing voice & matching staff names with directory...");
 
-      const response = await fetch("/api/gemini/parse-audio", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          audioBase64: base64Audio,
-          mimeType: blob.type || "audio/webm",
-          staffList: staffList,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || "Failed to process audio with Gemini");
-      }
+      const parsedData = await parseAudioWithGeminiClient(
+        base64Audio,
+        blob.type || "audio/webm",
+        staffList
+      );
 
       setProcessingStep("Task breakdown ready! Launching verification pipeline...");
 
       setTimeout(() => {
         setIsProcessing(false);
         onClose();
-        onTranscriptionComplete(data.data);
+        onTranscriptionComplete(parsedData);
       }, 600);
     } catch (err: any) {
       console.error("Gemini voice processing error:", err);

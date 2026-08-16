@@ -1,4 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
 import { StaffContact, VoiceParsingResponse } from "@/types";
 
 const CANDIDATE_MODELS = [
@@ -8,17 +7,16 @@ const CANDIDATE_MODELS = [
   "gemini-3.5-flash",
 ];
 
-export async function parseAudioWithGeminiServer(
+export async function parseAudioWithGeminiClient(
   audioBase64: string,
   mimeType: string,
   staffList: StaffContact[]
 ): Promise<VoiceParsingResponse> {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  // Only read from environment variables as requested
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not configured.");
+    throw new Error("NEXT_PUBLIC_GEMINI_API_KEY is not configured in your environment variables (.env.local or Vercel Environment Variables).");
   }
-
-  const ai = new GoogleGenAI({ apiKey });
 
   const staffDirectoryJson = JSON.stringify(
     staffList.map((s) => ({
@@ -89,33 +87,46 @@ You MUST output ONLY valid JSON in this exact structure without markdown code fe
 
   for (const modelName of CANDIDATE_MODELS) {
     try {
-      console.log(`[Gemini Voice Parsing] Attempting model: ${modelName}...`);
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                inlineData: {
-                  data: audioBase64,
-                  mimeType: mimeType || "audio/webm",
-                },
-              },
-              {
-                text: prompt,
-              },
-            ],
-          },
-        ],
-        config: {
-          responseMimeType: "application/json",
-          temperature: 0.1, // Low temperature for high precision and zero omission
+      console.log(`[Client Gemini Voice Parsing] Calling Google Generative Language API with model: ${modelName}...`);
+      
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  inlineData: {
+                    data: audioBase64,
+                    mimeType: mimeType || "audio/webm",
+                  },
+                },
+                {
+                  text: prompt,
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.1,
+          },
+        }),
       });
 
-      const responseText = response.text || "";
-      // Clean potential markdown code blocks
+      const responseData = await res.json();
+
+      if (!res.ok) {
+        throw new Error(responseData?.error?.message || `Gemini API returned status ${res.status}`);
+      }
+
+      const responseText = responseData.candidates?.[0]?.content?.parts?.[0]?.text || "";
       const cleanedJson = responseText
         .replace(/^```json\s*/i, "")
         .replace(/^```\s*/i, "")
@@ -123,13 +134,13 @@ You MUST output ONLY valid JSON in this exact structure without markdown code fe
         .trim();
 
       const parsed: VoiceParsingResponse = JSON.parse(cleanedJson);
-      console.log(`[Gemini Voice Parsing] Success with model: ${modelName}. Total assignments: ${parsed.assignments.length}`);
+      console.log(`[Client Gemini Voice Parsing] Success with model: ${modelName}. Assignments count: ${parsed.assignments.length}`);
       return parsed;
     } catch (err: any) {
-      console.warn(`[Gemini Voice Parsing] Model ${modelName} failed:`, err?.message || err);
+      console.warn(`[Client Gemini Voice Parsing] Model ${modelName} error:`, err?.message || err);
       lastError = err;
     }
   }
 
-  throw lastError || new Error("All candidate Gemini models failed to process the audio.");
+  throw lastError || new Error("All candidate Gemini models failed to process audio.");
 }

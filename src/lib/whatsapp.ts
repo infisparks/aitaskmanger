@@ -1,9 +1,5 @@
 import { WhatsAppSendResult } from "@/types";
 
-const DEFAULT_API_KEY = "vR39h6avY69g7kAU3YQbS6V6XEvudson";
-const DEFAULT_API_URL = "https://evo.infispark.in";
-const DEFAULT_INSTANCE = "mudassir";
-
 export function formatIndianPhoneNumber(phone: string): string {
   // Remove non-digit characters
   let cleaned = phone.replace(/\D/g, "");
@@ -70,26 +66,27 @@ export function formatStaffWhatsAppMessage(
 }
 
 /**
- * Direct Client-Side WhatsApp Message Dispatcher
- * Calls the Evolution API directly from the browser without server route dependencies.
+ * 100% Client-Side Evolution WhatsApp API Dispatcher
+ * URL: https://evo.infispark.in/message/sendText/{instance}
  */
 export async function sendWhatsAppMessage(
   phoneNumber: string,
   message: string
 ): Promise<WhatsAppSendResult> {
   const formattedNumber = formatIndianPhoneNumber(phoneNumber);
-  const apiKey = process.env.NEXT_PUBLIC_WHATSAPP_API_KEY || DEFAULT_API_KEY;
-  const baseUrl = process.env.NEXT_PUBLIC_WHATSAPP_API_URL || DEFAULT_API_URL;
-  const instance = process.env.NEXT_PUBLIC_WHATSAPP_INSTANCE || DEFAULT_INSTANCE;
+  const apiKey = process.env.NEXT_PUBLIC_WHATSAPP_API_KEY || "vR39h6avY69g7kAU3YQbS6V6XEvudson";
+  const baseUrl = process.env.NEXT_PUBLIC_WHATSAPP_API_URL || "https://evo.infispark.in";
+  const instance = process.env.NEXT_PUBLIC_WHATSAPP_INSTANCE || "mudassir";
 
-  const targetUrl = `${baseUrl.replace(/\/+$/, "")}/message/${instance}`;
+  // Correct Evolution API v2/v1 endpoint is /message/sendText/{instance}
+  const targetUrl = `${baseUrl.replace(/\/+$/, "")}/message/sendText/${instance}`;
 
   const whatsappPayload = {
     number: formattedNumber,
     text: message,
   };
 
-  console.log(`[Client WhatsApp Dispatch] Sending to ${targetUrl} for ${formattedNumber}...`);
+  console.log(`[Client WhatsApp Dispatch] POST ${targetUrl} for number: ${formattedNumber}`);
 
   try {
     const response = await fetch(targetUrl, {
@@ -110,13 +107,14 @@ export async function sendWhatsAppMessage(
     }
 
     if (!response.ok) {
-      console.error("[Client WhatsApp Error]", response.status, responseData);
+      console.error("[Client WhatsApp Dispatch Error]", response.status, responseData);
       return {
         success: false,
-        error: `WhatsApp API error (${response.status}): ${typeof responseData === 'object' ? JSON.stringify(responseData) : responseText}`,
+        error: `Evolution API returned ${response.status}: ${JSON.stringify(responseData)}`,
       };
     }
 
+    console.log("[Client WhatsApp Dispatch Success]", responseData);
     return {
       success: true,
       data: responseData,
@@ -125,13 +123,13 @@ export async function sendWhatsAppMessage(
     console.error("[Client WhatsApp Network Error]:", error);
     return {
       success: false,
-      error: error.message || "Failed to connect to WhatsApp Evolution API.",
+      error: error.message || "Failed to dispatch message via client-side fetch.",
     };
   }
 }
 
 /**
- * Direct WhatsApp Web / App link generator as a 1-tap fallback
+ * 1-Tap Fallback WhatsApp App Link
  */
 export function openWhatsAppDirectLink(phoneNumber: string, message: string) {
   const formattedNumber = formatIndianPhoneNumber(phoneNumber);
