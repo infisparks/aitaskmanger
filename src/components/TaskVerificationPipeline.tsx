@@ -62,6 +62,12 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
     setAssignments(updated);
   };
 
+  const handleTaskDescriptionChange = (staffIndex: number, taskIndex: number, newDesc: string) => {
+    const updated = [...assignments];
+    updated[staffIndex].tasks[taskIndex].description = newDesc;
+    setAssignments(updated);
+  };
+
   const handleTaskPriorityChange = (staffIndex: number, taskIndex: number, newPriority: TaskPriority) => {
     const updated = [...assignments];
     updated[staffIndex].tasks[taskIndex].priority = newPriority;
@@ -387,49 +393,62 @@ export const TaskVerificationPipeline: React.FC<TaskVerificationPipelineProps> =
                       {assignment.tasks.map((task, taskIdx) => (
                         <div
                           key={taskIdx}
-                          className="flex flex-col sm:flex-row sm:items-center gap-2 p-2.5 bg-white border border-[#E5E7EB] rounded-lg hover:bg-[#F9FAFB] transition-colors"
+                          className="flex flex-col gap-2 p-3 bg-white border border-[#E5E7EB] rounded-xl hover:border-indigo-200 transition-colors shadow-2xs"
                         >
-                          <span className="w-6 h-6 rounded-full bg-[#EEF2FF] text-[#4F46E5] text-[11px] font-bold flex items-center justify-center shrink-0">
-                            {taskIdx + 1}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-[#EEF2FF] text-[#4F46E5] text-[11px] font-bold flex items-center justify-center shrink-0">
+                              {taskIdx + 1}
+                            </span>
 
-                          {/* Editable Task Title */}
-                          <input
-                            type="text"
-                            value={task.title}
-                            onChange={(e) => handleTaskTitleChange(staffIdx, taskIdx, e.target.value)}
-                            className="flex-1 text-[13px] font-medium text-[#111827] bg-transparent border-none focus:ring-1 focus:ring-[#4F46E5] rounded px-2 py-1 focus:bg-white"
-                            placeholder="Task description..."
-                          />
-
-                          {/* Controls: Priority & Due Date */}
-                          <div className="flex items-center space-x-2 shrink-0">
-                            <select
-                              value={task.priority}
-                              onChange={(e) => handleTaskPriorityChange(staffIdx, taskIdx, e.target.value as TaskPriority)}
-                              className="text-[11px] px-2 py-1 rounded font-medium border border-[#E5E7EB] bg-white text-[#374151] focus:outline-hidden"
-                            >
-                              <option value="urgent">🔴 Urgent</option>
-                              <option value="high">🟠 High</option>
-                              <option value="medium">🟡 Medium</option>
-                              <option value="low">🟢 Low</option>
-                            </select>
-
+                            {/* Editable Task Title */}
                             <input
                               type="text"
-                              value={task.dueDate || "Today"}
-                              onChange={(e) => handleTaskDueDateChange(staffIdx, taskIdx, e.target.value)}
-                              placeholder="Due date"
-                              className="w-20 text-[11px] px-2 py-1 rounded border border-[#E5E7EB] bg-white text-[#374151] focus:outline-hidden text-center"
+                              value={task.title}
+                              onChange={(e) => handleTaskTitleChange(staffIdx, taskIdx, e.target.value)}
+                              className="flex-1 text-[13px] font-semibold text-[#111827] bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg px-2.5 py-1.5 focus:outline-hidden focus:border-[#4F46E5] focus:bg-white"
+                              placeholder="Actionable Task Title..."
                             />
 
-                            <button
-                              onClick={() => handleDeleteTask(staffIdx, taskIdx)}
-                              className="p-1 text-[#9CA3AF] hover:text-red-600 rounded hover:bg-red-50 transition-colors"
-                              title="Delete task item"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {/* Controls: Priority & Due Date */}
+                            <div className="flex items-center space-x-2 shrink-0">
+                              <select
+                                value={task.priority}
+                                onChange={(e) => handleTaskPriorityChange(staffIdx, taskIdx, e.target.value as TaskPriority)}
+                                className="text-[11px] px-2 py-1.5 rounded-lg font-medium border border-[#E5E7EB] bg-white text-[#374151] focus:outline-hidden"
+                              >
+                                <option value="urgent">🔴 Urgent</option>
+                                <option value="high">🟠 High</option>
+                                <option value="medium">🟡 Medium</option>
+                                <option value="low">🟢 Low</option>
+                              </select>
+
+                              <input
+                                type="text"
+                                value={task.dueDate || "Today"}
+                                onChange={(e) => handleTaskDueDateChange(staffIdx, taskIdx, e.target.value)}
+                                placeholder="Due date"
+                                className="w-24 text-[11px] px-2 py-1.5 rounded-lg border border-[#E5E7EB] bg-white text-[#374151] focus:outline-hidden text-center"
+                              />
+
+                              <button
+                                onClick={() => handleDeleteTask(staffIdx, taskIdx)}
+                                className="p-1.5 text-[#9CA3AF] hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                                title="Delete task item"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Editable Description / Detail */}
+                          <div className="pl-8">
+                            <input
+                              type="text"
+                              value={task.description || ""}
+                              onChange={(e) => handleTaskDescriptionChange(staffIdx, taskIdx, e.target.value)}
+                              placeholder="Task instructions, details, or context..."
+                              className="w-full text-[12px] text-[#4B5563] bg-transparent border-b border-dashed border-[#E5E7EB] hover:border-[#D1D5DB] focus:border-[#4F46E5] px-1 py-1 focus:outline-hidden"
+                            />
                           </div>
                         </div>
                       ))}

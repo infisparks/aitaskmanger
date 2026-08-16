@@ -29,37 +29,55 @@ export async function parseAudioWithGeminiServer(
     }))
   );
 
-  const prompt = `You are an intelligent AI Task Dispatcher and voice transcription specialist for a high-performance business team.
-Listen to the attached audio file very carefully. The speaker is delegating tasks to one or more staff members in English, Hindi, Urdu, or Hinglish (e.g. "aaj mudassir ko ye kaam karna hai...", "today's task for Mudassrio is to deploy the server and check bug...").
+  const prompt = `You are an expert Executive AI Task Dispatcher and voice transcription specialist for a high-performance business team.
+Listen to the attached audio file with extreme attention to every single detail. The speaker is delegating tasks to one or more staff members. The speech may be in English, Hindi, Urdu, or colloquial Hinglish (e.g., "aaj mudassir ko server restart karna hai, client ko call karke payment mangni hai aur report bhi ready karni hai...").
 
-Here is the OFFICIAL REGISTERED STAFF DIRECTORY:
+OFFICIAL REGISTERED STAFF DIRECTORY:
 ${staffDirectoryJson}
 
-YOUR INSTRUCTIONS:
-1. Provide the exact, verbatim transcription of the entire voice audio in "rawTranscription".
-2. Identify all tasks assigned to people in the voice recording.
-3. FUZZY MATCH & ALIGN NAMES: Match the spoken name (even if misspelled, slurred, nick-named, or mispronounced like "Mudassrio" -> "Mudassir") against the closest registered contact in the STAFF DIRECTORY above.
-4. Extract each individual task cleanly with a concise, actionable "title", optional "description", "priority" (choose from: "urgent", "high", "medium", "low"), and optional "dueDate" (e.g. "Today", "Tomorrow", "EOD").
-5. Group tasks by the matched staff member.
-6. If any tasks are mentioned without a recognized person, put them in "unmatchedTasks".
+CRITICAL RULES & INSTRUCTIONS:
+1. ZERO SKIPPED TASKS (EXHAUSTIVE EXTRACTION):
+   - You MUST NOT skip or summarize away any single action, instruction, follow-up, call, review, or task mentioned in the audio.
+   - If the speaker mentions multiple things in one sentence or continuous breath (e.g. "do X, and also Y, and then check Z"), create SEPARATE atomic task items for X, Y, and Z. Never combine separate tasks into one!
 
-You MUST respond ONLY with valid JSON in this exact structure without markdown formatting or code fences:
+2. PROFESSIONAL ENGLISH POLISHING (HINGLISH/HINDI TO BUSINESS ENGLISH):
+   - Translate colloquial or Hindi/Urdu instructions into crisp, professional, business-ready English titles and clear descriptions.
+   - Example Spoken: "aaj client se baat kar lena payment ke liye 4 baje tak"
+     -> Title: "Follow up with client regarding pending payment"
+     -> Description: "Call client before 4:00 PM to discuss and confirm payment status."
+     -> Due Date: "Today by 4:00 PM"
+     -> Priority: "high"
+
+3. FUZZY MATCH & ALIGN ALL NAMES:
+   - Match spoken/mispronounced names (e.g., "Mudassrio", "Mudasir", "Rehman", "Ali Bhai", etc.) to the closest registered contact in the STAFF DIRECTORY above.
+   - If a task is assigned to a person, group it under their matched staffId and staffName.
+
+4. DUE DATES & TIME SENSITIVITY:
+   - Extract exact times or relative deadlines (e.g. "by 3 PM", "EOD", "Tomorrow morning", "aaj sham tak", "immediately") into the "dueDate" field.
+
+5. ACCURATE PRIORITY:
+   - Assign "urgent" (for ASAP/emergency tasks), "high" (for important/client tasks), "medium" (default normal tasks), or "low".
+
+6. VERBATIM TRANSCRIPTION:
+   - Provide the complete, accurate word-for-word spoken transcript in "rawTranscription".
+
+You MUST output ONLY valid JSON in this exact structure without markdown code fences:
 {
-  "rawTranscription": "full verbatim transcription text here",
-  "summary": "Brief 1-sentence executive summary of tasks assigned in this voice note",
+  "rawTranscription": "full complete transcription of every spoken word",
+  "summary": "Professional 1-sentence executive summary of all assigned work",
   "assignments": [
     {
-      "staffId": "id from official staff list",
-      "staffName": "exact official name from staff list",
-      "staffPhone": "official phone from staff list",
-      "matchedSpokenName": "exact word/name as spoken in audio",
-      "confidence": 0.95,
+      "staffId": "id from official staff directory",
+      "staffName": "exact official name from staff directory",
+      "staffPhone": "official phone from staff directory",
+      "matchedSpokenName": "exact word/name as pronounced in audio",
+      "confidence": 0.98,
       "tasks": [
         {
-          "title": "Actionable task title",
-          "description": "Detail or context",
-          "priority": "medium",
-          "dueDate": "Today"
+          "title": "Professional and actionable task title in English",
+          "description": "Clear step-by-step detail or context of what needs to be done",
+          "priority": "high",
+          "dueDate": "Today by 5:00 PM"
         }
       ]
     }
@@ -92,7 +110,7 @@ You MUST respond ONLY with valid JSON in this exact structure without markdown f
         ],
         config: {
           responseMimeType: "application/json",
-          temperature: 0.2,
+          temperature: 0.1, // Low temperature for high precision and zero omission
         },
       });
 
@@ -105,12 +123,11 @@ You MUST respond ONLY with valid JSON in this exact structure without markdown f
         .trim();
 
       const parsed: VoiceParsingResponse = JSON.parse(cleanedJson);
-      console.log(`[Gemini Voice Parsing] Success with model: ${modelName}`);
+      console.log(`[Gemini Voice Parsing] Success with model: ${modelName}. Total assignments: ${parsed.assignments.length}`);
       return parsed;
     } catch (err: any) {
       console.warn(`[Gemini Voice Parsing] Model ${modelName} failed:`, err?.message || err);
       lastError = err;
-      // If error is 404 or capacity spike, continue loop to try next candidate model
     }
   }
 
