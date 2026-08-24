@@ -1,10 +1,10 @@
 import { StaffContact, VoiceParsingResponse } from "@/types";
 
 const CANDIDATE_MODELS = [
-  "gemini-3.7-flash",
-  "gemini-flash-lite-latest",
-  "gemini-3.6-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
   "gemini-3.5-flash",
+  "gemini-3.6-flash",
 ];
 
 export async function parseAudioWithGeminiClient(
@@ -86,6 +86,9 @@ You MUST output ONLY valid JSON in this exact structure without markdown code fe
   let lastError: any = null;
 
   for (const modelName of CANDIDATE_MODELS) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout per candidate model
+
     try {
       console.log(`[Client Gemini Voice Parsing] Calling Google Generative Language API with model: ${modelName}...`);
       
@@ -96,6 +99,7 @@ You MUST output ONLY valid JSON in this exact structure without markdown code fe
         headers: {
           "Content-Type": "application/json",
         },
+        signal: controller.signal,
         body: JSON.stringify({
           contents: [
             {
@@ -120,6 +124,8 @@ You MUST output ONLY valid JSON in this exact structure without markdown code fe
         }),
       });
 
+      clearTimeout(timeoutId);
+
       const responseData = await res.json();
 
       if (!res.ok) {
@@ -134,9 +140,10 @@ You MUST output ONLY valid JSON in this exact structure without markdown code fe
         .trim();
 
       const parsed: VoiceParsingResponse = JSON.parse(cleanedJson);
-      console.log(`[Client Gemini Voice Parsing] Success with model: ${modelName}. Assignments count: ${parsed.assignments.length}`);
+      console.log(`[Client Gemini Voice Parsing] Success with model: ${modelName}. Assignments count: ${parsed.assignments?.length || 0}`);
       return parsed;
     } catch (err: any) {
+      clearTimeout(timeoutId);
       console.warn(`[Client Gemini Voice Parsing] Model ${modelName} error:`, err?.message || err);
       lastError = err;
     }
